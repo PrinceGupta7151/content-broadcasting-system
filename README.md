@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Content Broadcasting System - Frontend
 
 A modern React-based educational content broadcasting system where teachers upload subject-based content, principals approve/reject it, and students view live broadcasts.
@@ -24,3 +25,6 @@ A modern React-based educational content broadcasting system where teachers uplo
 - **Icons**: Lucide React
 
 ## Project Structure
+=======
+# content-broadcasting-system
+>>>>>>> 0cf0ab3c5830e5ea513a99fba76e656de7b161ea
