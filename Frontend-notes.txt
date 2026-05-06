@@ -1,0 +1,275 @@
+# Content Broadcasting System - Frontend Documentation
+
+## Project Structure
+
+src/
+├── components/          # Reusable React components
+│   ├── common/         # Shared components (Navbar, Sidebar, Loading)
+│   ├── auth/           # Authentication components
+│   ├── teacher/        # Teacher-specific components
+│   ├── principal/      # Principal-specific components
+│   └── public/         # Public-facing components
+├── pages/              # Page-level components
+│   ├── auth/           # Login page
+│   ├── teacher/        # Teacher pages (Dashboard, Upload, MyContent)
+│   ├── principal/      # Principal pages (Dashboard, Pending, AllContent)
+│   └── public/         # Public live broadcast page
+├── services/           # API service layer
+│   ├── api.js         # Axios instance with interceptors
+│   ├── auth.service.js
+│   ├── content.service.js
+│   └── approval.service.js
+├── hooks/              # Custom React hooks
+│   ├── useAuth.js     # Authentication context hook
+│   ├── useApi.js      # API call wrapper
+│   └── useToast.js    # Toast notification hook
+├── context/            # React Context for state management
+│   ├── AuthContext.jsx
+│   └── ToastContext.jsx
+├── utils/              # Utility functions
+│   ├── constants.js    # App constants
+│   ├── validators.js   # Zod validation schemas
+│   ├── formatters.js   # Data formatting functions
+│   └── storage.js      # Local storage utilities
+└── App.jsx            # Root component with routing
+
+## Authentication Flow
+
+1. User navigates to /login page
+2. Submits email and password credentials
+3. AuthService.login() calls API endpoint
+4. On success:
+   - Token is stored in localStorage
+   - User data is stored in context
+   - User is redirected based on role (teacher/principal)
+5. Protected routes use ProtectedRoute component to verify:
+   - Token exists (user is logged in)
+   - User has correct role
+6. Token is automatically attached to all API requests via interceptor
+7. If token expires (401 response), user is redirected to login
+
+## Role-Based Routing
+
+- Teacher Routes:
+  - /teacher/dashboard (stats overview)
+  - /teacher/upload (content upload form)
+  - /teacher/content (my uploaded content)
+
+- Principal Routes:
+  - /principal/dashboard (approval stats)
+  - /principal/pending (pending approvals)
+  - /principal/content (all content with filters)
+
+- Public Routes:
+  - /login (authentication)
+  - /live/:teacherId (live broadcast view - no auth required)
+
+## API Integration Approach
+
+### Service Layer Pattern
+All API calls are abstracted into service modules:
+- auth.service.js: Login, logout, verify token
+- content.service.js: Upload, fetch content
+- approval.service.js: Get pending, approve, reject
+
+### Advantages:
+- Centralized API management
+- Easy to mock for testing
+- Simple to replace backend
+- Consistent error handling
+- Token management in interceptors
+
+### Error Handling:
+- API errors are caught and logged
+- User-friendly error messages via Toast
+- HTTP 401 errors trigger logout and redirect
+- Network errors are handled gracefully
+
+### Request/Response Flow:
+1. Component calls service function
+2. Service uses axios instance with token interceptor
+3. Interceptor adds Authorization header
+4. Response interceptor handles errors
+5. Data is returned or error is thrown
+6. Component handles data/error state
+
+## State Management Approach
+
+### 1. Context API (Authentication & Toasts)
+- AuthContext: Global auth state, login/logout functions
+- ToastContext: Toast notifications state
+
+### 2. Local Component State
+- Form state: React Hook Form for complex forms
+- UI state: Modal open/close, sidebar toggle
+- API state: Loading, data, error states
+
+### 3. Custom Hooks
+- useAuth(): Access auth context
+- useToast(): Access toast context
+- useApi(): Wrapper for API calls with loading/error handling
+
+### Why This Approach?
+- Avoids Redux complexity for this app size
+- Clear separation of concerns
+- Easy to debug and maintain
+- Sufficient for authentication and notifications
+
+## Form Handling & Validation
+
+### Used Technologies:
+- React Hook Form: Efficient form state management
+- Zod: Schema-based validation
+
+### Process:
+1. Define Zod schema (validators.js)
+2. Use zodResolver in useForm()
+3. Register form inputs with react-hook-form
+4. Display errors from formState.errors
+5. useForm() validates on blur/submit
+
+### Validation Examples:
+- loginSchema: Email format, password min length
+- uploadContentSchema: File type/size, time comparison
+
+## File Upload Implementation
+
+### Features:
+- Drag-and-drop support (UI ready)
+- File preview before upload
+- Type validation (JPG, PNG, GIF)
+- Size validation (max 10MB)
+- FormData for multipart/form-data POST
+
+### Process:
+1. User selects file
+2. FileReader generates preview
+3. File input value stored in form state
+4. On submit, FormData is created and sent
+5. Loading state shown during upload
+6. Success/error toast displayed
+
+## Performance Optimizations
+
+### Implemented:
+1. Code Splitting: Routes are lazy-loaded
+2. Image Optimization: Check image dimensions
+3. Memoization: React.memo for reusable components (optional)
+4. List Rendering: Use key prop correctly
+5. Debouncing: Filter/search inputs (optional)
+6. Lazy Loading: Images with loading states
+
+### For Large Lists (500-1000 items):
+- Implement pagination
+- Virtual scrolling (react-window) for future
+- API pagination endpoint
+- Limit items per page
+
+## Empty/Error/Loading States
+
+### Loading State:
+- SkeletonLoader component for card lists
+- Loading spinner with message
+- Disabled form buttons during submission
+
+### Empty State:
+- Dedicated empty state UI with icon
+- Contextual message (no content, no approvals, etc.)
+- Link to action (e.g., upload content)
+
+### Error State:
+- Toast notifications for errors
+- Error message display in forms
+- Graceful fallbacks
+- User-friendly error messages
+
+## Assumptions
+
+1. Backend API is available at process.env.REACT_APP_API_URL
+2. Authentication returns JWT token
+3. Token is valid for reasonable duration
+4. File upload is multipart/form-data
+5. Images are served as URLs (fileUrl)
+6. Timestamps are ISO 8601 format
+7. User object contains: id, name, email, role
+
+## Setup Instructions
+
+1. Install dependencies:
+   npm install
+
+2. Create .env file:
+   REACT_APP_API_URL=http://localhost:5000/api
+
+3. Start development server:
+   npm run dev
+
+4. Build for production:
+   npm run build
+
+## API Endpoints Required
+
+### Authentication
+- POST /auth/login
+- POST /auth/logout
+- GET /auth/verify
+
+### Content
+- GET /content/teacher (teacher's content)
+- GET /content/all (principal's all content)
+- POST /content/upload (upload new content)
+- GET /content/:id (get specific content)
+- GET /content/live/:teacherId (public live broadcast)
+
+### Approval
+- GET /approval/pending (pending approvals)
+- POST /approval/:id/approve (approve content)
+- POST /approval/:id/reject (reject with reason)
+- GET /approval/stats (dashboard statistics)
+
+## Browser Support
+
+- Chrome/Edge (latest 2 versions)
+- Firefox (latest 2 versions)
+- Safari (latest 2 versions)
+- Mobile browsers
+
+## Known Limitations & Future Improvements
+
+1. No offline support
+2. No real-time updates (could add WebSocket)
+3. Limited to single file upload
+4. No drag-drop (UI ready, just needs implementation)
+5. No image compression (frontend)
+6. No advanced filtering options
+7. Could add React Query for server state management
+8. Could add dark mode
+9. Could add i18n for internationalization
+
+## Testing Strategy
+
+### Components to Test:
+- LoginForm validation
+- ProtectedRoute authorization
+- API error handling
+- Form submission flows
+
+### Tools:
+- Jest
+- React Testing Library
+- Mock API responses
+
+## Deployment
+
+### Prerequisites:
+- Node.js 16+
+- npm or yarn
+
+### Steps:
+1. Build: npm run build
+2. Output: dist/ folder
+3. Deploy to: Vercel, Netlify, GitHub Pages
+4. Set REACT_APP_API_URL to backend URL
+
+### Environment Variables:
+- REACT_APP_API_URL: Backend API endpoint
