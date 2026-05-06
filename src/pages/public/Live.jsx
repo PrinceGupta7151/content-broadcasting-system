@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { Navbar } from '../../components/common/Navbar';
 import { useApi } from '../../hooks/useApi';
@@ -8,22 +8,26 @@ import { Image as ImageIcon, RefreshCcw } from 'lucide-react';
 
 export const Live = () => {
   const { teacherId } = useParams();
-  const { data: content, loading, error, execute } = useApi((id) => contentService.getLiveContent(id));
+  const { data: content, loading, error, execute } = useApi(contentService.getLiveContent);
 
-  useEffect(() => {
+  const fetchContent = useCallback(() => {
     if (teacherId) {
       execute(teacherId);
     }
   }, [teacherId, execute]);
 
   useEffect(() => {
+    fetchContent();
+  }, [fetchContent]);
+
+  useEffect(() => {
     if (!teacherId) return;
     const interval = setInterval(() => {
-      execute(teacherId).catch(() => {});
+      fetchContent();
     }, 15000);
 
     return () => clearInterval(interval);
-  }, [teacherId, execute]);
+  }, [teacherId, fetchContent]);
 
   const scheduleState = useMemo(() => {
     if (!content) return null;

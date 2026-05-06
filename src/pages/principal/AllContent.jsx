@@ -1,21 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Navbar } from '../../components/common/Navbar';
 import { Sidebar } from '../../components/common/Sidebar';
 import { useToast } from '../../hooks/useToast';
 import { useApi } from '../../hooks/useApi';
 import contentService from '../../services/content.service';
 import { Loading } from '../../components/common/Loading';
+import { Image as ImageIcon } from 'lucide-react';
 
 export const AllContent = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
-  const { data: contents, loading, execute } = useApi((params) => contentService.getAllContent(params));
+  const { data: contents, loading, execute } = useApi(contentService.getAllContent);
   const { addToast } = useToast();
 
   useEffect(() => {
     execute({ status: filter, search });
-  }, [filter, search, execute]);
+  }, [filter, search]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -29,6 +30,10 @@ export const AllContent = () => {
         return 'bg-gray-100 text-gray-800';
     }
   };
+
+  const handleRefresh = useCallback(() => {
+    execute({ status: filter, search });
+  }, [filter, search, execute]);
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -65,27 +70,38 @@ export const AllContent = () => {
             <Loading message="Loading content..." />
           ) : !contents || contents.length === 0 ? (
             <div className="bg-white rounded-lg shadow p-12 text-center">
-              <p className="text-gray-600 text-lg">No content available.</p>
+              <ImageIcon size={48} className="mx-auto text-gray-400 mb-4" />
+              <p className="text-gray-600 text-lg font-medium">No content available</p>
               <p className="text-gray-400 mt-2">Try a different filter or search term.</p>
             </div>
           ) : (
-            <div className="bg-white shadow overflow-hidden sm:rounded-md">
-              <ul className="divide-y divide-gray-200">
-                {contents.map((content) => (
-                  <li key={content.id} className="px-6 py-4">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">{content.title}</h3>
-                        <p className="text-sm text-gray-500">Teacher: {content.teacherName}</p>
-                        <p className="text-sm text-gray-500">Subject: {content.subject}</p>
-                      </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {contents.map((content) => (
+                <div key={content.id} className="bg-white shadow-md rounded-lg overflow-hidden hover:shadow-lg transition">
+                  <div className="aspect-video bg-gray-200 overflow-hidden flex items-center justify-center">
+                    {content.fileUrl ? (
+                      <img
+                        src={content.fileUrl}
+                        alt={content.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <ImageIcon size={48} className="text-gray-400" />
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <h3 className="text-lg font-semibold text-gray-900 line-clamp-2 mb-2">{content.title}</h3>
+                    <p className="text-sm text-gray-600 mb-1">Teacher: {content.teacherName}</p>
+                    <p className="text-sm text-gray-600 mb-3">Subject: {content.subject}</p>
+                    <div className="flex items-center justify-between">
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(content.status)}`}>
                         {content.status}
                       </span>
+                      <span className="text-xs text-gray-500">{new Date(content.createdAt).toLocaleDateString()}</span>
                     </div>
-                  </li>
-                ))}
-              </ul>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

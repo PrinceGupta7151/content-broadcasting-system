@@ -193,13 +193,51 @@ All API calls are abstracted into service modules:
 6. Timestamps are ISO 8601 format
 7. User object contains: id, name, email, role
 
+## Recent Fixes (May 6, 2026)
+
+### 1. File Upload Validation Issue
+- **Problem**: Form validation was failing with "Input not instance of File"
+- **Cause**: react-hook-form wasn't properly extracting File object from input event
+- **Solution**: Used Controller component to manually extract file from e.target.files[0]
+- **File**: src/pages/teacher/Upload.jsx
+
+### 2. Principal Dashboard Content Display
+- **Problem**: All content was not showing in principal dashboard and all content page
+- **Cause**: Incorrect dependency array in useEffect causing repeated function recreation
+- **Solution**: Removed inline apiFunction and passed contentService.getAllContent directly
+- **File**: src/pages/principal/AllContent.jsx
+- **Changes**:
+  - Fixed useEffect dependencies to avoid recreation of execute function
+  - Improved UI with card-based grid layout showing content previews
+  - Added better empty state with icon and message
+  - Added refresh functionality
+
+### 3. Public Live Page Enhancements
+- **Problem**: Public page didn't fully support unauthenticated access
+- **Cause**: Navbar was requiring user context for all views
+- **Solution**: Updated Navbar to handle anonymous (unauthenticated) views
+- **Files**: src/pages/public/Live.jsx, src/components/common/Navbar.jsx
+- **Features Added**:
+  - Error state with retry button
+  - Auto-refresh polling every 15 seconds
+  - Schedule status (Scheduled/Active/Expired) calculation
+  - Formatted date/time display
+  - Invalid link detection
+  - Better UX for all edge cases
+
+### 4. Mock Backend Credentials Update
+- Changed demo credentials:
+  - Teacher: teacher@test.com / 123456
+  - Principal: principal@test.com / 123456
+- Added migration logic to update existing localStorage entries
+
 ## Setup Instructions
 
 1. Install dependencies:
    npm install
 
 2. Create .env file:
-   REACT_APP_API_URL=http://localhost:5000/api
+   REACT_APP_API_URL=http://localhost:5000/api 
 
 3. Start development server:
    npm run dev
