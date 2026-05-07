@@ -1,203 +1,93 @@
-# Content Broadcasting System - Frontend Documentation
+# Content Broadcasting System - Frontend Notes
 
 ## Project Structure
 
-src/
-├── components/          # Reusable React components
-│   ├── common/         # Shared components (Navbar, Sidebar, Loading)
-│   ├── auth/           # Authentication components
-│   ├── teacher/        # Teacher-specific components
-│   ├── principal/      # Principal-specific components
-│   └── public/         # Public-facing components
-├── pages/              # Page-level components
-│   ├── auth/           # Login page
-│   ├── teacher/        # Teacher pages (Dashboard, Upload, MyContent)
-│   ├── principal/      # Principal pages (Dashboard, Pending, AllContent)
-│   └── public/         # Public live broadcast page
-├── services/           # API service layer
-│   ├── api.js         # Axios instance with interceptors
-│   ├── auth.service.js
-│   ├── content.service.js
-│   └── approval.service.js
-├── hooks/              # Custom React hooks
-│   ├── useAuth.js     # Authentication context hook
-│   ├── useApi.js      # API call wrapper
-│   └── useToast.js    # Toast notification hook
-├── context/            # React Context for state management
-│   ├── AuthContext.jsx
-│   └── ToastContext.jsx
-├── utils/              # Utility functions
-│   ├── constants.js    # App constants
-│   ├── validators.js   # Zod validation schemas
-│   ├── formatters.js   # Data formatting functions
-│   └── storage.js      # Local storage utilities
-└── App.jsx            # Root component with routing
+The frontend is organized for clarity and role separation:
+- `src/components/`: Reusable UI building blocks and shared widgets
+  - `common/`: Navbar, Sidebar, Loading, Toast
+  - `auth/`: Login-specific components
+  - `teacher/`, `principal/`, `public/`: role-specific UI pieces
+- `src/pages/`: Route-level page components
+  - `auth/`: Login page
+  - `teacher/`: Dashboard, Upload, MyContent
+  - `principal/`: Dashboard, PendingApprovals, AllContent
+  - `public/`: Live broadcast viewer
+- `src/services/`: API abstraction layer using Axios
+  - `api.js`: Axios instance with interceptors for auth and error handling
+  - `auth.service.js`, `content.service.js`, `approval.service.js`
+- `src/hooks/`: Custom hooks for app logic
+  - `useAuth.js`, `useApi.js`, `useToast.js`
+- `src/context/`: Context providers
+  - `AuthContext.jsx`, `ToastContext.jsx`
+- `src/utils/`: Shared utilities
+  - `constants.js`, `validators.js`, `formatters.js`, `storage.js`
+- `App.jsx`: Root component with route definitions and protected route setup
 
 ## Authentication Flow
 
-1. User navigates to /login page
-2. Submits email and password credentials
-3. AuthService.login() calls API endpoint
-4. On success:
-   - Token is stored in localStorage
-   - User data is stored in context
-   - User is redirected based on role (teacher/principal)
-5. Protected routes use ProtectedRoute component to verify:
-   - Token exists (user is logged in)
-   - User has correct role
-6. Token is automatically attached to all API requests via interceptor
-7. If token expires (401 response), user is redirected to login
+1. User opens `/login` and submits email/password.
+2. The login form calls `auth.service.login()`.
+3. On success:
+   - JWT token is stored in `localStorage`.
+   - User profile and role are stored in `AuthContext`.
+   - The app redirects the user based on role.
+4. `ProtectedRoute` checks auth state and optionally verifies role before allowing access.
+5. The Axios instance in `api.js` attaches the stored token to all outgoing requests.
+6. If the backend returns `401`, the interceptor triggers logout and redirects to `/login`.
 
 ## Role-Based Routing
 
-- Teacher Routes:
-  - /teacher/dashboard (stats overview)
-  - /teacher/upload (content upload form)
-  - /teacher/content (my uploaded content)
+- Teacher routes are grouped under `/teacher` and include:
+  - `/teacher/dashboard`
+  - `/teacher/upload`
+  - `/teacher/content`
+- Principal routes are grouped under `/principal` and include:
+  - `/principal/dashboard`
+  - `/principal/pending`
+  - `/principal/content`
+- Public routes require no auth and include:
+  - `/login`
+  - `/live/:teacherId`
 
-- Principal Routes:
-  - /principal/dashboard (approval stats)
-  - /principal/pending (pending approvals)
-  - /principal/content (all content with filters)
-
-- Public Routes:
-  - /login (authentication)
-  - /live/:teacherId (live broadcast view - no auth required)
+Role checks are enforced by `ProtectedRoute`, which ensures the current user is authenticated and has the correct role before rendering the route.
 
 ## API Integration Approach
 
-### Service Layer Pattern
-All API calls are abstracted into service modules:
-- auth.service.js: Login, logout, verify token
-- content.service.js: Upload, fetch content
-- approval.service.js: Get pending, approve, reject
-
-### Advantages:
-- Centralized API management
-- Easy to mock for testing
-- Simple to replace backend
-- Consistent error handling
-- Token management in interceptors
-
-### Error Handling:
-- API errors are caught and logged
-- User-friendly error messages via Toast
-- HTTP 401 errors trigger logout and redirect
-- Network errors are handled gracefully
-
-### Request/Response Flow:
-1. Component calls service function
-2. Service uses axios instance with token interceptor
-3. Interceptor adds Authorization header
-4. Response interceptor handles errors
-5. Data is returned or error is thrown
-6. Component handles data/error state
+- All backend communication is centralized in service modules.
+- `api.js` exports an Axios instance with:
+  - Authorization header injection
+  - Response error handling
+- Service files expose domain-specific functions:
+  - `auth.service.js` handles login/logout and token validation
+  - `content.service.js` handles content fetch, upload, and details
+  - `approval.service.js` handles pending approvals and status updates
+- Components call service functions, not Axios directly.
+- This keeps API logic separate from UI and makes switching the backend or adding mocks easier.
+- Errors are surfaced through `useApi` and shown with Toast notifications.
 
 ## State Management Approach
 
-### 1. Context API (Authentication & Toasts)
-- AuthContext: Global auth state, login/logout functions
-- ToastContext: Toast notifications state
-
-### 2. Local Component State
-- Form state: React Hook Form for complex forms
-- UI state: Modal open/close, sidebar toggle
-- API state: Loading, data, error states
-
-### 3. Custom Hooks
-- useAuth(): Access auth context
-- useToast(): Access toast context
-- useApi(): Wrapper for API calls with loading/error handling
-
-### Why This Approach?
-- Avoids Redux complexity for this app size
-- Clear separation of concerns
-- Easy to debug and maintain
-- Sufficient for authentication and notifications
-
-## Form Handling & Validation
-
-### Used Technologies:
-- React Hook Form: Efficient form state management
-- Zod: Schema-based validation
-
-### Process:
-1. Define Zod schema (validators.js)
-2. Use zodResolver in useForm()
-3. Register form inputs with react-hook-form
-4. Display errors from formState.errors
-5. useForm() validates on blur/submit
-
-### Validation Examples:
-- loginSchema: Email format, password min length
-- uploadContentSchema: File type/size, time comparison
-
-## File Upload Implementation
-
-### Features:
-- Drag-and-drop support (UI ready)
-- File preview before upload
-- Type validation (JPG, PNG, GIF)
-- Size validation (max 10MB)
-- FormData for multipart/form-data POST
-
-### Process:
-1. User selects file
-2. FileReader generates preview
-3. File input value stored in form state
-4. On submit, FormData is created and sent
-5. Loading state shown during upload
-6. Success/error toast displayed
-
-## Performance Optimizations
-
-### Implemented:
-1. Code Splitting: Routes are lazy-loaded
-2. Image Optimization: Check image dimensions
-3. Memoization: React.memo for reusable components (optional)
-4. List Rendering: Use key prop correctly
-5. Debouncing: Filter/search inputs (optional)
-6. Lazy Loading: Images with loading states
-
-### For Large Lists (500-1000 items):
-- Implement pagination
-- Virtual scrolling (react-window) for future
-- API pagination endpoint
-- Limit items per page
-
-## Empty/Error/Loading States
-
-### Loading State:
-- SkeletonLoader component for card lists
-- Loading spinner with message
-- Disabled form buttons during submission
-
-### Empty State:
-- Dedicated empty state UI with icon
-- Contextual message (no content, no approvals, etc.)
-- Link to action (e.g., upload content)
-
-### Error State:
-- Toast notifications for errors
-- Error message display in forms
-- Graceful fallbacks
-- User-friendly error messages
+- `AuthContext` manages global authentication state and the current user.
+- `ToastContext` manages notification state for success/error alerts.
+- Local component state handles UI details such as form values, loading flags, and modal visibility.
+- `React Hook Form` manages form state and validation.
+- Custom hooks encapsulate reusable behavior:
+  - `useAuth()` exposes auth state and actions.
+  - `useToast()` exposes toast dispatch functions.
+  - `useApi()` wraps API calls with loading/error handling.
+- This approach avoids introducing Redux for this app size while keeping global state simple and predictable.
 
 ## Assumptions
 
-1. Backend API is available at process.env.REACT_APP_API_URL
-2. Authentication returns JWT token
-3. Token is valid for reasonable duration
-4. File upload is multipart/form-data
-5. Images are served as URLs (fileUrl)
-6. Timestamps are ISO 8601 format
-7. User object contains: id, name, email, role
+- The backend exposes a REST API reachable via `process.env.REACT_APP_API_URL`.
+- Authentication returns a JWT token.
+- The token is stored in `localStorage` and used for future requests.
+- Role information is part of the user object.
+- File uploads are sent as `multipart/form-data`.
+- Content timestamps use ISO 8601 format.
+- Public live broadcasts are served via a route that does not require auth.
+- User roles are limited to at least `teacher` and `principal`.
 
-## Recent Fixes (May 6, 2026)
-
-### 1. File Upload Validation Issue
-- **Problem**: Form validation was failing with "Input not instance of File"
-- **Cause**: react-hook-form wasn't properly extracting File object from input event
 - **Solution**: Used Controller component to manually extract file from e.target.files[0]
 - **File**: src/pages/teacher/Upload.jsx
 
